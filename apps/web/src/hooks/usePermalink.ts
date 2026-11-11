@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { type MatrixEvent, type Room, type RoomMember } from "matrix-js-sdk/src/matrix";
+import { type MatrixEvent, type Room, type RoomMember, User } from "matrix-js-sdk/src/matrix";
 
 import { type ButtonEvent } from "../components/views/elements/AccessibleButton";
 import { PillType } from "../components/views/elements/PillType";
@@ -144,14 +144,6 @@ export const usePermalink: (args: Args) => HookResult = ({
         text = "@room";
     } else if (type === PillType.UserMention && member) {
         text = member.name || resourceId;
-        onClick = (e: ButtonEvent): void => {
-            e.preventDefault();
-            e.stopPropagation();
-            dis.dispatch({
-                action: Action.ViewUser,
-                member: member,
-            });
-        };
     } else if (type === PillType.RoomMention) {
         if (targetRoom) {
             text = targetRoom.name || resourceId;
@@ -160,6 +152,20 @@ export const usePermalink: (args: Args) => HookResult = ({
         text = member?.name || _t("common|user");
     } else if (type === PillType.EventInOtherRoom) {
         text = targetRoom?.name || _t("common|room");
+    }
+
+    if (type === PillType.UserMention && resourceId) {
+        const userId = resourceId;
+        // Always intercept the click, even while the member is still being looked up, so that the
+        // browser does not navigate away from the room. Fall back to a bare User if no member is known yet.
+        onClick = (e: ButtonEvent): void => {
+            e.preventDefault();
+            e.stopPropagation();
+            dis.dispatch({
+                action: Action.ViewUser,
+                member: member ?? new User(userId),
+            });
+        };
     }
 
     return {
